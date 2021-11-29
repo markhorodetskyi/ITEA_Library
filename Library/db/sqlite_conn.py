@@ -63,7 +63,7 @@ class SqliteConn(Connector):
                 print(kwargs)
                 sql_request = self.__sql_insert_msg(kwargs['type_obj'], kwargs['columns'])
             elif kwargs['action'] == 'DELETE':
-                sql_request = self.__sql_del_msg(kwargs['type_obj'], kwargs['target_key'])
+                sql_request = self.__sql_del_msg(kwargs['type_obj'], kwargs['target'])
             elif kwargs['action'] == 'UPDATE':
                 sql_request = self.__sql_update_msg(kwargs['type_obj'], kwargs['update_col'], kwargs['target_key'])
             else:

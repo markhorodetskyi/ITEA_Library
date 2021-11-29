@@ -22,8 +22,18 @@ class Library:
 
     def __str__(self):
         print(f'''{'№':^4} | {'title':^15} | {'author':^30} | {'genre':^15} | {'year':^4} | {'Reader':^6} | ''')
-        print(f'''{'-'*92:^92}''')
+        print(f'''{'-' * 92:^92}''')
         return ''.join(f'{book} \n' for book in self.books)
+
+    @staticmethod
+    def menu():
+        return ['1. Добавити книгу(add, a)',
+                '2. Видалити книгу(del, d)',
+                '3. Відредагувати книгу(edit, e)',
+                '4. Добавити читача(addU, au)',
+                '5. Показати книги(sb)',
+                '6. Показати читачів(su)',
+                'Будь ласка введіть номер 1 - 6, або "end(enter)" для завершення програми: ']
 
     def load_from_db(self):
         self.books = [Book(*book) for book in self.db.read_from_db(type_obj='books')]
@@ -33,7 +43,7 @@ class Library:
 
     def add_book(self, title, author, genre, year):
         self.db.write_to_db(action='INSERT', type_obj='books', columns=Book(
-            id=self.last_book_id+1,
+            id=self.last_book_id + 1,
             title=title,
             author=author,
             genre=genre,
@@ -59,7 +69,7 @@ class Library:
         pass
 
     def add_user(self, name, surname):
-        self.db.write_to_db(action='INSERT', type_obj='users', columns=User(id=self.last_user_id+1,
+        self.db.write_to_db(action='INSERT', type_obj='users', columns=User(id=self.last_user_id + 1,
                                                                             name=name,
                                                                             surname=surname).__dict__)
 
@@ -75,15 +85,19 @@ class Library:
         return self.last_user_id
 
     def show_book(self):
-        print(f'''{'№':^4} | {'title':^15} | {'author':^30} | {'genre':^15} | {'year':^4} | {'Reader':^6} | ''')
-        print(f'''{'-' * 92:^92}''')
-        print(''.join(f'{book} \n' for book in self.books))
-        print(f'''{'-' * 92:^92}''')
-        print()
+        book_table = [
+            f'''{'№':^4} | {'title':^15} | {'author':^30} | {'genre':^15} | {'year':^4} | {'Reader':^6} | ''',
+            f'''{'-' * 92:^92}''',
+            ''.join(f'{book} \n' for book in self.books),
+            f'''{'-' * 92:^92}'''
+        ]
+        return book_table
 
     def show_user(self):
-        print(f'''{'№':^4} | {'name':^15} | {'surname':^15} | ''')
-        print(f'''{'-' * 43:^43}''')
-        print(''.join(f'{user} \n' for user in self.readers))
-        print(f'''{'-' * 43:^43}''')
-        print()
+        user_table = [
+        f'''{'№':^4} | {'name':^15} | {'surname':^15} | ''',
+        f'''{'-' * 43:^43}''',
+        ''.join(f'{user} \n' for user in self.readers),
+        f'''{'-' * 43:^43}'''
+        ]
+        return user_table
