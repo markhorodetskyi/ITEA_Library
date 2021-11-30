@@ -3,7 +3,7 @@ from Library.server.routing import on
 from Library.server.enums import *
 from Library.server import call_result, call
 from Library.server.library_handler import SocketHandler
-
+from threading import Thread
 
 from loguru import logger
 
@@ -41,6 +41,9 @@ def input_not_none(text: str = ''):
 
 
 class ClientHandler(SocketHandler):
+
+    def __init__(self, sc):
+        super().__init__(sc)
 
     # def send_get_menu(self):  #Запит до сервера(очікує меню)
     #     request = call.GetMenu(status=True)
@@ -107,18 +110,9 @@ class ClientHandler(SocketHandler):
             msg='Ok'
         )
 
-
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as cs:
-    # cs.connect((HOST, PORT))
-    # handler = ClientHandler(cs)
-    # handler.handle()
-    # # handler_theard.start()
-    # # handler.send_get_menu()
-    try:
+if __name__ == "__main__":
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as cs:
         cs.connect((HOST, PORT))
         handler = ClientHandler(cs)
-        handler.handle()
-    except Exception as e:
-        cs.close()
-        logger.error(f"{e}")
+        handler.run()
 

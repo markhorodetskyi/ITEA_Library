@@ -1,14 +1,15 @@
-from dataclasses import asdict
-from queue import Queue, Empty
-from loguru import logger
-from Library.server.routing import create_route_map
-from Library.server import call_result, call
-from Library.server.message_utils import send_msg, recv_msg, unpack, default_encoding, MessageType, Call
 import json
-import uuid
 import re
 import time
-import threading
+import uuid
+from dataclasses import asdict
+from queue import Queue, Empty
+
+from loguru import logger
+
+from Library.server import call_result
+from Library.server.message_utils import send_msg, recv_msg, unpack, default_encoding, MessageType, Call
+from Library.server.routing import create_route_map
 
 
 logger.add(f'Library/log/{__name__}.json',
@@ -81,29 +82,30 @@ class SocketHandler:
 
     def __init__(self, sc):
         self.logger = logger
-        self._response_timeout = 30
+        self._response_timeout = 180
         self.sc = sc
+        # self.menu = menu
         self.route_map = create_route_map(self)
         self._response_queue = Queue()
         self._unique_id_generator = uuid.uuid4
         return
 
-    def handle(self):
+    def run(self):
         while True:
-            # try:
-            self.data = recv_msg(self.sc).decode(default_encoding)
-            # self.logger.debug('HANDLE')
-            if not self.data:
+            try:
+                self.data = recv_msg(self.sc).decode(default_encoding)
+                if not self.data:
+                    break
+                # self.logger.debug(f'recive --> {self.data}')
+                msg = unpack(self.data)
+                if msg.message_type_id == MessageType.Call:
+                    self._handle_call(msg)
+                elif msg.message_type_id in [MessageType.CallResult, MessageType.CallError]:
+                    self._response_queue.put_nowait(msg)
+            except Exception as e:
+                logger.error(f"[HANDLE ERROR:]: {e}")
                 break
-            # self.logger.debug(f'recive --> {self.data}')
-            msg = unpack(self.data)
-            if msg.message_type_id == MessageType.Call:
-                self._handle_call(msg)
-            elif msg.message_type_id in [MessageType.CallResult, MessageType.CallError]:
-                self._response_queue.put_nowait(msg)
-            # except Exception as e:
-            #     logger.error(f"[HANDLE ERROR:]: {e}")
-            #     self.sc.close()
+        self.sc.close()
 
     def _handle_call(self, msg):
         try:
@@ -126,7 +128,6 @@ class SocketHandler:
             response = msg.create_call_error(e).to_json()
             send_msg(response, self.sc)
             return
-        print(response)
         temp_response_payload = asdict(response)
         response_payload = remove_nones(temp_response_payload)
         camel_case_payload = snake_to_camel_case(response_payload)
@@ -145,10 +146,9 @@ class SocketHandler:
         try:
             response = self._get_specific_response(call.unique_id, self._response_timeout)
         except Empty:
-            raise Empty(
-                f"Waited {self._response_timeout}s for response on "
-                f"{call.to_json()}."
-            )
+            logger.error(f'Time left ({self._response_timeout}s) for response on {call.to_json()}.')
+            self.sc.close()
+            return None
 
         if response.message_type_id == MessageType.CallError:
             logger.warning(f"Received a CALL Error: {response}'")

@@ -5,8 +5,9 @@ from Library.server.routing import on
 from Library.server.enums import *
 from Library.server import call_result, call
 from Library.server.library_handler import SocketHandler
-import socket
+from socket import socket
 import threading
+from threading import Thread
 
 from loguru import logger
 
@@ -22,6 +23,11 @@ LIBRARY = None
 
 class LibraryHandler(SocketHandler):
 
+    def __init__(self, sc):
+        super(LibraryHandler, self).__init__(sc)
+        self.library = Library(choice_db())
+
+
     def menu(self, action):
         menu_action = {
             '1': self.add_new_book,
@@ -29,7 +35,8 @@ class LibraryHandler(SocketHandler):
             '3': self.edit_book,
             '4': self.add_new_user,
             '5': self.show_books,
-            '6': self.show_users
+            '6': self.show_users,
+            '': self.sc.close
         }
         menu_action[action]()
 
@@ -47,9 +54,10 @@ class LibraryHandler(SocketHandler):
         )
 
     def give_menu(self):
-        request = call.GiveMenu(menu_list=LIBRARY.menu())
+        request = call.GiveMenu(menu_list=self.library.menu())
         response = self.call(request)
-        self.menu(str(response.choice))
+        if response:
+            self.menu(str(response.choice))
 
     def add_new_book(self):
         request = call.AddNewBook(inputs=['Будь ласка введіть назву книги: ',
@@ -57,61 +65,66 @@ class LibraryHandler(SocketHandler):
                                           'Будь ласка введіть жанр:',
                                           'Будь ласка введіть рік публікації:'])
         response = self.call(request)
-        LIBRARY.add_book(author=response.author,
-                         title=response.title,
-                         genre=response.genre,
-                         year=response.year)
-        self.give_menu()
+        if response:
+            self.library.add_book(author=response.author,
+                             title=response.title,
+                             genre=response.genre,
+                             year=response.year)
+            self.give_menu()
 
     def del_book(self):
         request = call.DelBook(inputs=['Введіть номер книги для ідентифікації: ', ])
         response = self.call(request)
-        LIBRARY.del_book(target='id', key=response.id)
-        self.give_menu()
+        if response:
+            self.library.del_book(target='id', key=response.id)
+            self.give_menu()
 
     def edit_book(self):
         request = call.EditBook(inputs=['Введіть номер книги для ідентифікації: ',
                                           'Введіть полe якe потрібно змінити(title, author, genre, year): ',
                                           'Введіть нове значення: '])
         response = self.call(request)
-        LIBRARY.edit_book(target='id',
-                          key=response.id,
-                          update_col=response.update_col,
-                          value=response.value)
-        self.give_menu()
+        if response:
+            self.library.edit_book(target='id',
+                              key=response.id,
+                              update_col=response.update_col,
+                              value=response.value)
+            self.give_menu()
 
     def add_new_user(self):
         request = call.AddNewUser(inputs=['Будь ласка введіть ім\'я', 'Будь ласка введіть прізвище'])
         response = self.call(request)
-        LIBRARY.add_user(name=response.name,
-                         surname=response.surname)
-        self.give_menu()
+        if response:
+            self.library.add_user(name=response.name,
+                             surname=response.surname)
+            self.give_menu()
 
     def show_books(self):
-        request = call.ShowBook(books=LIBRARY.show_book())
+        request = call.ShowBook(books=self.library.show_book())
         response = self.call(request)
-        print(response)
-        self.give_menu()
+        if response:
+            print(response)
+            self.give_menu()
 
     def show_users(self):
-        request = call.ShowUser(users=LIBRARY.show_user())
+        request = call.ShowUser(users=self.library.show_user())
         response = self.call(request)
-        print(response)
-        self.give_menu()
+        if response:
+            print(response)
+            self.give_menu()
 
 
-def start(server):
-    server.listen()
-    print(f"[LISTENING] Server is listening on {address[0]}")
-    while True:
-        try:
+def start(adr):
+    with socket() as server:
+        server.bind(adr)
+        server.listen(2)
+        print(f"[LISTENING] Server is listening on {address[0]}")
+        while True:
             conn, addr = server.accept()
             new_client_handler = LibraryHandler(conn)
-            thread = threading.Thread(target=new_client_handler.handle)
-            thread.start()
+            server_thread = Thread(target=new_client_handler.run)
+            server_thread.start()
             new_client_handler.give_menu()
-        except Exception as e:
-            print(f'Conn closed with error: {e}')
 
 
 def choice_db():
@@ -183,8 +196,5 @@ def choice_db():
 
 
 if __name__ == '__main__':
-    LIBRARY = Library(choice_db())
     address = ('localhost', 9999)
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind(address)
-    start(server)
+    start(address)
