@@ -33,9 +33,22 @@ class EditBook:
 
 
 @dataclass
+class GiveBook:
+    inputs: List
+
+
+@dataclass
+class ReturnBook:
+    inputs: List
+
+
+@dataclass
 class AddNewUser:
     inputs: List
 
+@dataclass
+class DelUser:
+    inputs: List
 
 @dataclass
 class ShowBook:
@@ -45,3 +58,12 @@ class ShowBook:
 @dataclass
 class ShowUser:
     users: List
+
+
+@dataclass
+class ShowBookUser:
+    inputs: List
+
+@dataclass
+class Errors:
+    msg: str

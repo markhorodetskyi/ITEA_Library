@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class GiveMenu:
     choice: str
 
+
 @dataclass
 class GetMenu:
     menu_list: List
@@ -37,14 +38,39 @@ class EditBook:
 
 
 @dataclass
+class GiveBook:
+    book_id: str
+    user_id: str
+
+
+@dataclass
+class ReturnBook:
+    book_id: str
+
+
+@dataclass
 class AddNewUser:
     name: str
     surname: str
 
 @dataclass
+class DelUser:
+    id: int
+
+
+@dataclass
 class ShowBook:
     msg: str
 
+
 @dataclass
 class ShowUser:
+    msg: str
+
+@dataclass
+class ShowBookUser:
+    id: int
+
+@dataclass
+class Errors:
     msg: str

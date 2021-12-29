@@ -33,7 +33,7 @@ def input_to_int(text: str):
 
 def input_not_none(text: str = ''):
     while True:
-        inp = input(text)
+        inp = input(f'{text}\n')
         if not inp:
             print('Ви нічого не ввели, спробуйте ще раз!')
             continue
@@ -60,6 +60,27 @@ class ClientHandler(SocketHandler):
     def on_give_menu(self, menu_list):
         print(''.join(f'{i}\n' for i in menu_list))
         return call_result.GiveMenu(choice=input())
+
+    @on(Action.ShowBook)
+    def on_show_book(self, books):
+        print(''.join(f'{i}\n' for i in books))
+        return call_result.ShowBook(
+            msg='Ok'
+        )
+
+    @on(Action.ShowUser)
+    def on_show_user(self, users):
+        print(''.join(f'{i}\n' for i in users))
+        return call_result.ShowUser(
+            msg='Ok'
+        )
+
+    @on(Action.ShowBookUser)
+    def on_show_book_user(self, inputs):
+        id, = [input_not_none(inp) for inp in inputs]
+        return call_result.ShowBookUser(
+            id=id
+        )
 
     @on(Action.AddNewBook)
     def on_new_book(self, inputs): #Якщо від сервера прийшов запит AddNewBook виконується ця функція. в запиті
@@ -96,19 +117,35 @@ class ClientHandler(SocketHandler):
             surname=surname
         )
 
-    @on(Action.ShowBook)
-    def on_show_book(self, books):
-        print(''.join(f'{i}\n' for i in books))
-        return call_result.ShowBook(
+    @on(Action.DelBook)  # те саме що й AddNewBook
+    def on_del_user(self, inputs):
+        id, = [input_not_none(inp) for inp in inputs]
+        return call_result.DelUser(
+            id=id
+        )
+
+    @on(Action.GiveBook)
+    def on_give_book(self, inputs):
+        book_id, user_id = [input_not_none(inp) for inp in inputs]
+        return call_result.GiveBook(
+            book_id=book_id,
+            user_id=user_id
+        )
+
+    @on(Action.ReturnBook)
+    def on_return_book(self, inputs):
+        book_id, = [input_not_none(inp) for inp in inputs]
+        return call_result.ReturnBook(
+            book_id=book_id,
+        )
+
+    @on(Action.Errors)
+    def on_error(self, msg):
+        print(f'{msg}\n')
+        return call_result.Errors(
             msg='Ok'
         )
 
-    @on(Action.ShowUser)
-    def on_show_user(self, users):
-        print(''.join(f'{i}\n' for i in users))
-        return call_result.ShowUser(
-            msg='Ok'
-        )
 
 if __name__ == "__main__":
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as cs:

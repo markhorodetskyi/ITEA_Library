@@ -4,6 +4,7 @@ import time
 import uuid
 from dataclasses import asdict
 from queue import Queue, Empty
+from threading import Lock
 
 from loguru import logger
 
@@ -88,7 +89,7 @@ class SocketHandler:
         self.route_map = create_route_map(self)
         self._response_queue = Queue()
         self._unique_id_generator = uuid.uuid4
-        return
+        self._call_lock = Lock()
 
     def run(self):
         while True:
@@ -142,13 +143,14 @@ class SocketHandler:
             action=payload.__class__.__name__,
             payload=remove_nones(camel_case_payload)
         )
-        self.send(call.to_json())
-        try:
-            response = self._get_specific_response(call.unique_id, self._response_timeout)
-        except Empty:
-            logger.error(f'Time left ({self._response_timeout}s) for response on {call.to_json()}.')
-            self.sc.close()
-            return None
+        with self._call_lock:
+            self.send(call.to_json())
+            try:
+                response = self._get_specific_response(call.unique_id, self._response_timeout)
+            except Empty:
+                logger.error(f'Time left ({self._response_timeout}s) for response on {call.to_json()}.')
+                self.sc.close()
+                return None
 
         if response.message_type_id == MessageType.CallError:
             logger.warning(f"Received a CALL Error: {response}'")

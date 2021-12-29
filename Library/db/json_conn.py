@@ -2,6 +2,7 @@ from .connectorDB import Connector
 import json
 from pathlib import Path
 from loguru import logger
+from threading import RLock
 
 logger.add(f'Library/log/{__name__}.json',
            format='{time} {level} {message}',
@@ -9,6 +10,7 @@ logger.add(f'Library/log/{__name__}.json',
            rotation='1000 KB',
            compression='zip',
            serialize=True)
+
 
 
 class JsonConn(Connector):
@@ -21,6 +23,7 @@ class JsonConn(Connector):
         self.__path_users_db = users_db if users_db else self.__DB_USERS
         self.__json_init(self.__path_books_db)
         self.__json_init(self.__path_users_db)
+        self.rlock = RLock()
 
     @staticmethod
     def __json_init(path):
@@ -60,20 +63,22 @@ class JsonConn(Connector):
 
     def read_from_db(self, type_obj, where=None):
         path = self.__db_with_type(type_obj)
-        with open(path, 'r') as f:
-            if f:
-                querry = [json.loads(line) for line in f]
-                data = [tuple(row.values()) for row in querry]
-                return data
-            return ''
+        with self.rlock:
+            with open(path, 'r') as f:
+                if f:
+                    querry = [json.loads(line) for line in f]
+                    data = [tuple(row.values()) for row in querry]
+                    return data
+                return ''
 
     def write_to_db(self, **kwargs):
-        if kwargs['action'] == 'INSERT':
-            self.__json_insert(kwargs['type_obj'], kwargs['columns'])
-        elif kwargs['action'] == 'DELETE':
-            self.__json_del(kwargs['type_obj'], kwargs['target'])
-        elif kwargs['action'] == 'UPDATE':
-            self.__json_update(kwargs['type_obj'], kwargs['update_col'], kwargs['target_key'])
-        else:
-            print('Неправильний тип операції')
-            return False
+        with self.rlock:
+            if kwargs['action'] == 'INSERT':
+                self.__json_insert(kwargs['type_obj'], kwargs['columns'])
+            elif kwargs['action'] == 'DELETE':
+                self.__json_del(kwargs['type_obj'], kwargs['target'])
+            elif kwargs['action'] == 'UPDATE':
+                self.__json_update(kwargs['type_obj'], kwargs['update_col'], kwargs['target_key'])
+            else:
+                print('Неправильний тип операції')
+                return False
